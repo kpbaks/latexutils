@@ -7,11 +7,13 @@ import sys
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
 
+from pygments import highlight
+from pygments.formatters import TerminalFormatter
+from pygments.lexers import TexLexer
+
 import epilog
 import latex
-from pygments import highlight
-from pygments.lexers import TexLexer
-from pygments.formatters import TerminalFormatter
+from utils import get_column_number_in_document, get_line_number_in_document
 
 DESCRIPTION = """\
 Count the number of times each reference is used in a LaTeX document.
@@ -22,8 +24,6 @@ The output is a list of references, one per line, with the number of times
 each reference is used in the document.  The references are sorted by the
 number of times they are used, with the most used references first.
 """
-
-from utils import get_column_number_in_document, get_line_number_in_document
 
 
 @dataclass
@@ -67,7 +67,7 @@ class LaTeXReference:
         name: The name of the reference.
         count: The number of times the reference is used.
     """
-    
+
     file: str
     interval: TextFileInterval = None
     label_reffered_to: Optional[LaTeXLabel] = None
@@ -94,7 +94,6 @@ def ellipsis(text: str, max_length: int) -> str:
     if len(text) > max_length:
         return text[:max_length] + "..."
     return text
-
 
 
 def find_in_list(
@@ -181,10 +180,10 @@ if __name__ == "__main__":
             line_end: int = line_number
             column_start: int = hit.start("label")
             column_end: int = hit.end("label")
-            interval: TextFileInterval = TextFileInterval(line_start, line_end, column_start, column_end)
+            interval: TextFileInterval = TextFileInterval(
+                line_start, line_end, column_start, column_end
+            )
             labels.append(LaTeXLabel(label, args.filename, interval, text=line))
-
-
 
     for line_number, line in enumerate(document):
         line_number += 1  # line numbers start at 1
@@ -195,9 +194,17 @@ if __name__ == "__main__":
             line_end: int = line_number
             column_start: int = hit.start("label")
             column_end: int = hit.end("label")
-            interval: TextFileInterval = TextFileInterval(line_start, line_end, column_start, column_end)
-            label_reffered_to_or_none: Optional[LaTeXLabel] = find_in_list(labels, label, lambda a, b: a.label == b)
-            references.append(LaTeXReference(args.filename, interval, label_reffered_to_or_none, text=line))
+            interval: TextFileInterval = TextFileInterval(
+                line_start, line_end, column_start, column_end
+            )
+            label_reffered_to_or_none: Optional[LaTeXLabel] = find_in_list(
+                labels, label, lambda a, b: a.label == b
+            )
+            references.append(
+                LaTeXReference(
+                    args.filename, interval, label_reffered_to_or_none, text=line
+                )
+            )
 
     label_counts: Dict[LaTeXLabel, int] = {label: 0 for label in labels}
 
@@ -216,13 +223,17 @@ if __name__ == "__main__":
         if not referened:
             url: str = f"{label.file}:{line_start}:{column_start}"
             # print the label int red, and show where it is defined
-            print(f"{red(label.label)} (defined at {bold(url)}) is {red('NOT')} referenced!")
+            print(
+                f"{red(label.label)} (defined at {bold(url)}) is {red('NOT')} referenced!"
+            )
         else:
             # print the label in green, and show where it is defined
             # for each reference, show where it is used
             url: str = f"{label.file}:{line_start}:{column_start}"
 
-            print(f"{green(label.label)} (defined at {bold(url)}) is referenced {green(count)} times:")
+            print(
+                f"{green(label.label)} (defined at {bold(url)}) is referenced {green(count)} times:"
+            )
             for reference in references:
                 if reference.label_reffered_to is None:
                     continue
@@ -230,11 +241,13 @@ if __name__ == "__main__":
                     line_start, column_start = reference.interval.get_start()
 
                     text: str = reference.text
-                    text = text.replace("\\", "")
+                    # text = text.replace("\\", "")
 
                     terminal_width: int = os.get_terminal_size().columns
                     text_elipsized: str = ellipsis(text, terminal_width - 10)
-                    text_highlighted: str = highlight(text_elipsized, TexLexer(), TerminalFormatter())
+                    text_highlighted: str = highlight(
+                        text_elipsized, TexLexer(), TerminalFormatter()
+                    )
 
                     url: str = f"{reference.file}:{line_start}:{column_start}"
                     # print(f"    {bold(url)}: {italics(text_elipsized)}")
