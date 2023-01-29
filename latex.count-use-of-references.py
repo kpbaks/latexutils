@@ -25,6 +25,8 @@ each reference is used in the document.  The references are sorted by the
 number of times they are used, with the most used references first.
 """
 
+ANSI_DISABLED = False
+
 
 @dataclass
 class TextFileInterval:
@@ -75,19 +77,23 @@ class LaTeXReference:
 
 
 def red(text: str) -> str:
-    return f"\033[1;31m{text}\033[0m"
+    if not ANSI_DISABLED:
+        return f"\033[1;31m{text}\033[0m"
 
 
 def green(text: str) -> str:
-    return f"\033[1;32m{text}\033[0m"
+    if not ANSI_DISABLED:
+        return f"\033[1;32m{text}\033[0m"
 
 
 def bold(text: str) -> str:
-    return f"\033[1m{text}\033[0m"
+    if not ANSI_DISABLED:
+        return f"\033[1m{text}\033[0m"
 
 
 def italics(text: str) -> str:
-    return f"\033[3m{text}\033[0m"
+    if not ANSI_DISABLED:
+        return f"\033[3m{text}\033[0m"
 
 
 def ellipsis(text: str, max_length: int) -> str:
@@ -134,6 +140,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--no-ansi",
+        action="store_true",
+        help="disable ANSI escape sequences in the output",
+    )
+
+    parser.add_argument(
         "-v", "--verbose", action="count", default=0, help="increase verbosity"
     )
     parser.add_argument(
@@ -151,6 +163,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    if args.no_ansi:
+        ANSI_DISABLED = True
 
     # Read the file
     text: str = ""
@@ -234,6 +249,8 @@ if __name__ == "__main__":
             print(
                 f"{green(label.label)} (defined at {bold(url)}) is referenced {green(count)} times:"
             )
+            terminal_width: int = os.get_terminal_size().columns
+
             for reference in references:
                 if reference.label_reffered_to is None:
                     continue
@@ -241,18 +258,17 @@ if __name__ == "__main__":
                     line_start, column_start = reference.interval.get_start()
 
                     text: str = reference.text
-                    # text = text.replace("\\", "")
 
-                    terminal_width: int = os.get_terminal_size().columns
-                    text_elipsized: str = ellipsis(text, terminal_width - 10)
                     text_highlighted: str = highlight(
-                        text_elipsized, TexLexer(), TerminalFormatter()
+                        text, TexLexer(), TerminalFormatter()
+                    )
+
+                    text_highlighted_and_elipsized: str = ellipsis(
+                        text_highlighted, terminal_width - 10
                     )
 
                     url: str = f"{reference.file}:{line_start}:{column_start}"
-                    # print(f"    {bold(url)}: {italics(text_elipsized)}")
-                    # print(f"    {bold(url)}: {text_highlighted}")
                     print(f"    {bold(url)}:")
-                    print(f"        {text_highlighted}")
+                    print(f"        {text_highlighted_and_elipsized}")
 
         print()

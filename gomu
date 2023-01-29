@@ -1,0 +1,135 @@
+#!/usr/bin/env python3
+
+import argparse
+import difflib
+import os
+import re
+import subprocess
+import sys
+from abc import ABC, abstractmethod
+from dataclasses import dataclass
+from enum import Enum
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Set, Tuple, Union
+
+DESCRIPTION = """\
+Find the LaTeX labels in a LaTeX document.
+"""
+
+EPILOG = """\
+The output is a list of labels, one per line, with the file and line number
+where the label is defined.  The labels are sorted by the file and line
+"""
+
+
+def get_input_order_from_latex_file(filename: str) -> List[str]:
+    # Open the file
+
+    # A list to store the names of the files visited
+    files_visited: List[str] = []
+    
+    def recurse(filename: str) -> None:
+        try:
+            with open(filename, "r") as f:
+        except FileNotFoundError:
+            print(f"Error: File {filename} does not exist")
+            sys.exit(1)
+
+            # Read the file line by line
+            for line in f:
+                # Check if the line contains an \input command
+                if "\\input{" in line:
+                    # Get the name of the file specified in the \input command
+                    input_file = line.strip().split("{")[1].split("}")[0]
+                    # Check if the file exists
+                    if not os.path.exists(input_file):
+                        # If the file does not exist, print an error message and exit the script
+                        print(f"Error: File {input_file} does not exist")
+                        sys.exit(1)
+                    # If the file does exist, add it to the list of files visited
+                    files_visited.append(input_file)
+                    # Recursively parse the input file
+                    recurse(input_file)
+                else:
+                    # If the line does not contain an \input command, write it to the output file
+                    with open("output.tex", "a") as out:
+                        out.write(line)
+
+    recurse(filename)
+
+    return files_visited
+        
+
+
+@dataclass
+class FileSystemNode:
+    node: str | List[FileSystemNode]
+
+    def apply(self, f: Callable[[str], str]) -> FileSystemNode:
+        if isinstance(self.node, str):
+            return FileSystemNode(f(self.node))
+        else:
+            return FileSystemNode([x.apply(f) for x in self.node])
+
+    def __eq__(self, other: Any) -> bool:
+        if not isinstance(other, FileSystemNode):
+            return NotImplemented
+        return self.node == other.node
+
+
+# class FileSystemFormatter(Abc):
+#     @abstractmethod
+#     def format(self, fs: Path |) -> str:
+#         pass
+
+
+# \input{}
+# \include{}
+# \subfile{}
+# \subfilefrom{}
+# \subfilefromto{}
+# \subfilefromto*
+# \includegraphics{}
+# \includesvg{}
+
+
+def input_tree():
+
+    pass
+
+
+def main(argc: int, argv: List[str]) -> None:
+    name_of_this_script = os.path.basename(__file__)
+    parser = argparse.ArgumentParser(
+        prog=name_of_this_script,
+        description=DESCRIPTION,
+        epilog=EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    subparsers = parser.add_subparsers(title='subcommands', dest='subcommand')
+    parser_tree = subparsers.add_parser('tree', help='print the input tree')
+    parser_tree.add_argument('filename', help='the LaTeX file to parse')
+    parser_tree.add_argument(
+
+
+
+    # gomu collapse | merge | join <file.tex>
+    # gomu label list <file.tex>
+    # gomu ref list [<file.tex> | -]
+    # gomu package list <file.tex>
+    # gomu tree <file.tex>
+    # gomu bib list <file.tex>
+
+    parser.add_argument(
+
+
+    args = parser.parse_args(argv[1:])
+    
+
+    pass
+
+
+if __name__ == "__main__":
+    argv = sys.argv
+    argc = len(argv)
+    main(argc, argv)
